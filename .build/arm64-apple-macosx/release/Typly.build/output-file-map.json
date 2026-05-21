@@ -1,0 +1,49 @@
+{
+  "": {
+    "dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/Typly.d",
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/Typly.o",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/primary.swiftdeps"
+  },
+  "/Users/Max/Downloads/typly/Sources/ActionExecutor.swift": {
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor.swift.o",
+    "swiftmodule": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor~partial.swiftmodule",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor.swiftdeps",
+    "diagnostics": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor.dia"
+  },
+  "/Users/Max/Downloads/typly/Sources/AppDelegate.swift": {
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate.swift.o",
+    "swiftmodule": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate~partial.swiftmodule",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate.swiftdeps",
+    "diagnostics": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate.dia"
+  },
+  "/Users/Max/Downloads/typly/Sources/ContextClassifier.swift": {
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier.swift.o",
+    "swiftmodule": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier~partial.swiftmodule",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier.swiftdeps",
+    "diagnostics": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier.dia"
+  },
+  "/Users/Max/Downloads/typly/Sources/GlobalInputController.swift": {
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController.swift.o",
+    "swiftmodule": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController~partial.swiftmodule",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController.swiftdeps",
+    "diagnostics": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController.dia"
+  },
+  "/Users/Max/Downloads/typly/Sources/LiquidGlassOverlay.swift": {
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay.swift.o",
+    "swiftmodule": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay~partial.swiftmodule",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay.swiftdeps",
+    "diagnostics": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay.dia"
+  },
+  "/Users/Max/Downloads/typly/Sources/TextTransformerEngine.swift": {
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine.swift.o",
+    "swiftmodule": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine~partial.swiftmodule",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine.swiftdeps",
+    "diagnostics": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine.dia"
+  },
+  "/Users/Max/Downloads/typly/Sources/main.swift": {
+    "object": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main.swift.o",
+    "swiftmodule": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main.swiftdeps",
+    "diagnostics": "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main.dia"
+  }
+}

@@ -1,0 +1,66 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "Typly-arm64-apple-macosx-release.exe": ["<Typly-arm64-apple-macosx-release.exe>"]
+  "Typly-arm64-apple-macosx-release.module": ["<Typly-arm64-apple-macosx-release.module>"]
+  "main": ["<Typly-arm64-apple-macosx-release.exe>","<Typly-arm64-apple-macosx-release.module>"]
+  "test": ["<Typly-arm64-apple-macosx-release.exe>","<Typly-arm64-apple-macosx-release.module>"]
+default: "main"
+nodes:
+  "/Users/Max/Downloads/typly/Sources/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/Max/Downloads/typly/Sources/ActionExecutor.swift","/Users/Max/Downloads/typly/Sources/AppDelegate.swift","/Users/Max/Downloads/typly/Sources/ContextClassifier.swift","/Users/Max/Downloads/typly/Sources/GlobalInputController.swift","/Users/Max/Downloads/typly/Sources/LiquidGlassOverlay.swift","/Users/Max/Downloads/typly/Sources/TextTransformerEngine.swift","/Users/Max/Downloads/typly/Sources/main.swift"]
+    outputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/sources"]
+    description: "Write auxiliary file /Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/sources"
+
+  "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main.swift.o"]
+    outputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.product/Objects.LinkFileList"
+
+  "/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+
+  "<Typly-arm64-apple-macosx-release.exe>":
+    tool: phony
+    inputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly"]
+    outputs: ["<Typly-arm64-apple-macosx-release.exe>"]
+
+  "<Typly-arm64-apple-macosx-release.module>":
+    tool: phony
+    inputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Modules/Typly.swiftmodule"]
+    outputs: ["<Typly-arm64-apple-macosx-release.module>"]
+
+  "C.Typly-arm64-apple-macosx-release.exe":
+    tool: shell
+    inputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.product/Objects.LinkFileList"]
+    outputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly"]
+    description: "Linking ./.build/arm64-apple-macosx/release/Typly"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release","-o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly","-module-name","Typly","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-dead_strip","-Xlinker","-alias","-Xlinker","_Typly_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx13.0","-Xlinker","-sectcreate","-Xlinker","__TEXT","-Xlinker","__info_plist","-Xlinker","Info.plist","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.Typly-arm64-apple-macosx-release.module":
+    tool: shell
+    inputs: ["/Users/Max/Downloads/typly/Sources/ActionExecutor.swift","/Users/Max/Downloads/typly/Sources/AppDelegate.swift","/Users/Max/Downloads/typly/Sources/ContextClassifier.swift","/Users/Max/Downloads/typly/Sources/GlobalInputController.swift","/Users/Max/Downloads/typly/Sources/LiquidGlassOverlay.swift","/Users/Max/Downloads/typly/Sources/TextTransformerEngine.swift","/Users/Max/Downloads/typly/Sources/main.swift","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/sources"]
+    outputs: ["/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ActionExecutor.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/AppDelegate.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/ContextClassifier.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/GlobalInputController.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/LiquidGlassOverlay.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/TextTransformerEngine.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/main.swift.o","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Modules/Typly.swiftmodule"]
+    description: "Compiling Swift Module 'Typly' (7 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","Typly","-emit-dependencies","-emit-module","-emit-module-path","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Modules/Typly.swiftmodule","-output-file-map","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/output-file-map.json","-whole-module-optimization","-num-threads","10","-c","@/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Typly.build/sources","-I","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/Modules","-target","arm64-apple-macosx13.0","-whole-module-optimization","-num-threads","10","-serialize-diagnostics","-O","-j10","-DSWIFT_PACKAGE","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/Max/Downloads/typly/.build/arm64-apple-macosx/release/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","Typly_main","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","typly"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/Max/Downloads/typly/Sources/","/Users/Max/Downloads/typly/Package.swift","/Users/Max/Downloads/typly/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
