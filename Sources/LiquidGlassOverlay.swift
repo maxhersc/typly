@@ -10,7 +10,7 @@ class LiquidGlassOverlay: NSPanel {
         self.showCloseButton = showCloseButton
         textLabel = NSTextField(labelWithString: text)
         textLabel.font = NSFont.systemFont(ofSize: 14, weight: .medium)
-        textLabel.textColor = .labelColor
+        textLabel.textColor = .white
         textLabel.alignment = .center
         textLabel.lineBreakMode = .byWordWrapping
         textLabel.maximumNumberOfLines = 10
@@ -41,12 +41,18 @@ class LiquidGlassOverlay: NSPanel {
     private func setupVisualEffectView() {
         let visualEffectView = NSVisualEffectView(frame: self.contentView!.bounds)
         visualEffectView.autoresizingMask = [.width, .height]
-        visualEffectView.material = .popover
+        visualEffectView.material = .hudWindow
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.state = .active
+        visualEffectView.appearance = NSAppearance(named: .vibrantDark)
+        
         visualEffectView.wantsLayer = true
         visualEffectView.layer?.cornerRadius = 12
         visualEffectView.layer?.masksToBounds = true
+        
+        // Subtle edge highlight for glass effect
+        visualEffectView.layer?.borderWidth = 1.0
+        visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.2).cgColor
         
         textLabel.translatesAutoresizingMaskIntoConstraints = false
         visualEffectView.addSubview(textLabel)
