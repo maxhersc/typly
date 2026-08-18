@@ -82,7 +82,7 @@ final class HotkeyManager {
                                                EventParamName(kEventParamDirectObject),
                                                EventParamType(typeEventHotKeyID),
                                                nil,
-                                               ByteCount(MemoryLayout<EventHotKeyID>.size),
+                                               UInt32(MemoryLayout<EventHotKeyID>.size),
                                                nil,
                                                &pressedID)
                 guard status == noErr else { return OSStatus(eventNotHandledErr) }
