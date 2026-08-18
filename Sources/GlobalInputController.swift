@@ -1,52 +1,46 @@
 import AppKit
 
-class GlobalInputController {
-    
-    private var eventMonitor: Any?
+/// Owns the trigger shortcut and runs the capture -> classify -> execute pipeline.
+final class GlobalInputController {
+
+    private let hotkeys = HotkeyManager()
     private let classifier = ContextClassifier()
-    
-    func start() {
-        // We use flagsChanged to detect Caps Lock
-        // Note: NSEvent's global monitor is called asynchronously and does not allow modifying the event.
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handleFlagsChanged(event)
+    private var isRunningPipeline = false
+
+    var shortcutDescription: String { hotkeys.shortcutDescription }
+
+    /// Returns false if the shortcut could not be registered.
+    @discardableResult
+    func start() -> Bool {
+        hotkeys.register { [weak self] in
+            self?.triggerPipeline()
         }
     }
-    
+
     func stop() {
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
-        }
+        hotkeys.unregister()
     }
-    
-    // We want to trigger when Caps Lock is PRESSED, but Caps Lock toggles state.
-    // So we'll trigger any time Caps Lock changes state.
-    // A better approach is checking the event's keyCode == 57 (Caps Lock)
-    private func handleFlagsChanged(_ event: NSEvent) {
-        // KeyCode 57 is Caps Lock
-        if event.keyCode == 57 {
-            // Because Caps Lock triggers on both press down and release, 
-            // distinguishing between keydown and keyup for Caps Lock using NSEvent 
-            // is tricky, but often macOS sends flagsChanged when the state changes.
-            // Let's just trigger immediately when Caps Lock state toggles.
-            
-            DispatchQueue.main.async {
-                self.triggerPipeline()
-            }
-        }
-    }
-    
+
     private func triggerPipeline() {
-        // Step 1: Capture context
-        let context = classifier.captureContext()
-        
-        // Step 2: Classify action
-        let action = classifier.determineAction(for: context)
-        
-        // Step 3: Execute action
-        if let action = action {
-            ActionExecutor.shared.execute(action: action, context: context)
+        // Held or repeated shortcuts can fire again while a request is still in
+        // flight; one run at a time keeps us from stacking overlays and edits.
+        guard !isRunningPipeline else { return }
+        isRunningPipeline = true
+
+        classifier.captureContext { [weak self] context in
+            guard let self else { return }
+
+            guard let action = self.classifier.determineAction(for: context) else {
+                // Say so rather than failing silently: plenty of apps simply do not
+                // expose their selection to us.
+                self.isRunningPipeline = false
+                ActionExecutor.shared.reportNoSelection()
+                return
+            }
+
+            ActionExecutor.shared.execute(action: action, context: context) { [weak self] in
+                self?.isRunningPipeline = false
+            }
         }
     }
 }

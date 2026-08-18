@@ -1,88 +1,80 @@
 import AppKit
 
-class ActionExecutor {
-    
+final class ActionExecutor {
+
     static let shared = ActionExecutor()
-    
+
+    /// How long the pasteboard has to stay ours for the front app to service the
+    /// synthetic Cmd+V before we put the user's clipboard back.
+    private static let clipboardRestoreDelay: TimeInterval = 0.8
+
     private var currentOverlay: LiquidGlassOverlay?
-    
-    func execute(action: TyplyAction, context: TyplyContext) {
+
+    /// `completion` runs once the action has been carried out, successfully or not.
+    func execute(action: TyplyAction, context: TyplyContext, completion: @escaping () -> Void) {
         TextTransformerEngine.shared.transform(action: action) { [weak self] result in
-            
-            switch action {
-            case .fixSpelling, .rewrite:
-                // Inline replacement
-                if context.isEditable, let element = context.focusedElement {
-                    self?.replaceInline(text: result, in: element)
-                } else {
-                    // Fallback if somehow it was classified editable but we don't have element
-                    self?.showOverlay(text: result)
+            defer { completion() }
+            guard let self else { return }
+
+            switch result {
+            case .failure(let message):
+                // Show the problem; never type an error message into the document.
+                self.showOverlay(text: message, showCloseButton: true)
+
+            case .success(let text):
+                switch action {
+                case .fixSpelling, .rewrite:
+                    if context.isEditable {
+                        self.replace(text: text, in: context)
+                    } else {
+                        self.showOverlay(text: text, showCloseButton: true)
+                    }
+                case .summarize:
+                    self.showOverlay(text: text, showCloseButton: true)
+                case .define:
+                    self.showOverlay(text: text, showCloseButton: false)
                 }
-                
-            case .summarize:
-                self?.showOverlay(text: result, showCloseButton: true)
-            case .define:
-                self?.showOverlay(text: result, showCloseButton: false)
             }
         }
     }
-    
-    private func replaceInline(text: String, in element: AXUIElement) {
-        let error = AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFTypeRef)
-        
-        if error != .success {
-            // Fallback: clipboard paste
-            copyToClipboardAndPaste(text: text)
-        }
+
+    func reportNoSelection() {
+        showOverlay(text: "Select some text first.", showCloseButton: false)
     }
-    
-    private func copyToClipboardAndPaste(text: String) {
+
+    private func replace(text: String, in context: TyplyContext) {
+        // If the selection itself came from the clipboard, AX cannot write it back.
+        if !context.usedPasteboardFallback,
+           let element = context.focusedElement,
+           AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFTypeRef) == .success {
+            return
+        }
+        pasteOverSelection(text: text)
+    }
+
+    private func pasteOverSelection(text: String) {
         let pasteboard = NSPasteboard.general
-        let oldItems = pasteboard.pasteboardItems?.compactMap { item -> NSPasteboardItem in
-            let newItem = NSPasteboardItem()
-            for type in item.types {
-                if let data = item.data(forType: type) {
-                    newItem.setData(data, forType: type)
-                }
-            }
-            return newItem
-        }
-        
+        let snapshot = PasteboardSnapshot(pasteboard)
+
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-        
-        // Synthesize Cmd+V
-        simulateKeyPress(keyCode: 9, useCommand: true) // 9 is 'v'
-        
-        // We cannot reliably restore clipboard immediately because simulated keys are async,
-        // but for v1 we just leave the text in clipboard or delay restore.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if let items = oldItems {
-                pasteboard.clearContents()
-                pasteboard.writeObjects(items)
+
+        KeyboardSimulator.paste()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.clipboardRestoreDelay) {
+            snapshot.restore(to: pasteboard)
+        }
+    }
+
+    private func showOverlay(text: String, showCloseButton: Bool) {
+        currentOverlay?.dismissOverlay()
+
+        let overlay = LiquidGlassOverlay(text: text, showCloseButton: showCloseButton)
+        overlay.onDismiss = { [weak self] dismissed in
+            if self?.currentOverlay === dismissed {
+                self?.currentOverlay = nil
             }
         }
-    }
-    
-    private func simulateKeyPress(keyCode: CGKeyCode, useCommand: Bool) {
-        let source = CGEventSource(stateID: .hidSystemState)
-        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
-        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
-        
-        if useCommand {
-            keyDown?.flags = .maskCommand
-            keyUp?.flags = .maskCommand
-        }
-        
-        keyDown?.post(tap: .cghidEventTap)
-        keyUp?.post(tap: .cghidEventTap)
-    }
-    
-    private func showOverlay(text: String, showCloseButton: Bool = false) {
-        // If an overlay is already showing, dismiss it
-        currentOverlay?.close()
-        
-        let overlay = LiquidGlassOverlay(text: text, showCloseButton: showCloseButton)
         overlay.show()
         currentOverlay = overlay
     }

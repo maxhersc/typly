@@ -1,0 +1,7 @@
+.DS_Store
+.build/
+.swiftpm/
+Typly.app/
+test_llm
+*.dSYM/
+*.o

@@ -1,132 +1,203 @@
 import AppKit
 
-class LiquidGlassOverlay: NSPanel {
-    
+/// A borderless, non activating panel never becomes the key window, so any control
+/// inside it has to opt in to receiving the very first click.
+private final class FirstMouseVisualEffectView: NSVisualEffectView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+private final class FirstMouseButton: NSButton {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+final class LiquidGlassOverlay: NSPanel {
+
+    private enum Metrics {
+        static let contentWidth: CGFloat = 300
+        static let minimumTextWidth: CGFloat = 120
+        static let horizontalPadding: CGFloat = 16
+        static let verticalPadding: CGFloat = 14
+        static let closeButtonSize: CGFloat = 18
+        static let closeButtonGap: CGFloat = 8
+        static let screenMargin: CGFloat = 12
+        static let autoDismissDelay: TimeInterval = 3.0
+        static let cursorOffset: CGFloat = 15
+        static let measurementHeight: CGFloat = 10_000
+    }
+
+    var onDismiss: ((LiquidGlassOverlay) -> Void)?
+
     private let textLabel: NSTextField
+    private let showsCloseButton: Bool
     private var dismissTimer: Timer?
-    private let showCloseButton: Bool
-    
+    private var isDismissing = false
+
     init(text: String, showCloseButton: Bool = false) {
-        self.showCloseButton = showCloseButton
+        showsCloseButton = showCloseButton
+
         textLabel = NSTextField(labelWithString: text)
         textLabel.font = NSFont.systemFont(ofSize: 14, weight: .medium)
         textLabel.textColor = .white
         textLabel.alignment = .center
         textLabel.lineBreakMode = .byWordWrapping
-        textLabel.maximumNumberOfLines = 10
-        
-        // Calculate size based on text
-        let maxSize = NSSize(width: 300, height: 1000)
-        let rect = textLabel.cell!.cellSize(forBounds: NSRect(origin: .zero, size: maxSize))
-        
-        let width = min(max(rect.width + 40, 150), 340)
-        let height = rect.height + (showCloseButton ? 50 : 30)
-        
+        textLabel.maximumNumberOfLines = 12
+        textLabel.preferredMaxLayoutWidth = Metrics.contentWidth
+
+        // Measure the wrapped text, then size the panel around it.
+        let textSize = textLabel.sizeThatFits(NSSize(width: Metrics.contentWidth,
+                                                    height: Metrics.measurementHeight))
+        let textWidth = min(Metrics.contentWidth, max(textSize.width, Metrics.minimumTextWidth))
+        let closeButtonWidth = showCloseButton ? Metrics.closeButtonSize + Metrics.closeButtonGap : 0
+        let width = textWidth + Metrics.horizontalPadding * 2 + closeButtonWidth
+        let height = textSize.height + Metrics.verticalPadding * 2
+
         super.init(contentRect: NSRect(x: 0, y: 0, width: width, height: height),
                    styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered,
                    defer: false)
-        
-        self.isFloatingPanel = true
-        self.level = .floating
-        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        self.backgroundColor = .clear
-        self.hasShadow = true
-        
-        setupVisualEffectView()
-        
+
+        // NSWindow releases itself on close by default, which over-releases under ARC
+        // while ActionExecutor still holds a strong reference to this panel.
+        isReleasedWhenClosed = false
+
+        isFloatingPanel = true
+        hidesOnDeactivate = false
+        level = .floating
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+
+        // Both of these are required. Setting a clear background alone does not make
+        // the window non opaque, so vibrancy never blends and the rounded corners get
+        // drawn over an opaque black square.
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+
+        setupContentView()
         positionNearCursor()
     }
-    
-    private func setupVisualEffectView() {
-        let visualEffectView = NSVisualEffectView(frame: self.contentView!.bounds)
-        visualEffectView.autoresizingMask = [.width, .height]
-        visualEffectView.material = .hudWindow
-        visualEffectView.blendingMode = .behindWindow
-        visualEffectView.state = .active
-        visualEffectView.appearance = NSAppearance(named: .vibrantDark)
-        
-        visualEffectView.wantsLayer = true
-        visualEffectView.layer?.cornerRadius = 12
-        visualEffectView.layer?.masksToBounds = true
-        
-        // Subtle edge highlight for glass effect
-        visualEffectView.layer?.borderWidth = 1.0
-        visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.2).cgColor
-        
+
+    private func setupContentView() {
+        let container = FirstMouseVisualEffectView()
+        container.material = .hudWindow
+        container.blendingMode = .behindWindow
+        container.state = .active
+        container.appearance = NSAppearance(named: .vibrantDark)
+
+        container.wantsLayer = true
+        container.layer?.cornerRadius = 12
+        container.layer?.masksToBounds = true
+
+        // Subtle edge highlight for the glass effect.
+        container.layer?.borderWidth = 1.0
+        container.layer?.borderColor = NSColor.white.withAlphaComponent(0.2).cgColor
+
         textLabel.translatesAutoresizingMaskIntoConstraints = false
-        visualEffectView.addSubview(textLabel)
-        
-        if showCloseButton {
-            let closeButton = NSButton()
+        container.addSubview(textLabel)
+
+        // The bottom pin is not required: the panel is already sized from the measured
+        // text, and a rounding difference should not produce a broken constraint.
+        let bottomPin = textLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor,
+                                                          constant: -Metrics.verticalPadding)
+        bottomPin.priority = .defaultHigh
+
+        var constraints: [NSLayoutConstraint] = [
+            textLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor,
+                                               constant: Metrics.horizontalPadding),
+            textLabel.topAnchor.constraint(equalTo: container.topAnchor,
+                                           constant: Metrics.verticalPadding),
+            bottomPin,
+            textLabel.widthAnchor.constraint(lessThanOrEqualToConstant: Metrics.contentWidth)
+        ]
+
+        if showsCloseButton {
+            let closeButton = FirstMouseButton()
             closeButton.title = ""
             closeButton.bezelStyle = .shadowlessSquare
             closeButton.isBordered = false
             closeButton.imagePosition = .imageOnly
-            closeButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Close")
-            closeButton.contentTintColor = .secondaryLabelColor
+            closeButton.image = NSImage(systemSymbolName: "xmark.circle.fill",
+                                        accessibilityDescription: "Close")
+            closeButton.contentTintColor = .white
             closeButton.target = self
-            closeButton.action = #selector(fadeOutAndClose)
+            closeButton.action = #selector(dismissOverlay)
             closeButton.translatesAutoresizingMaskIntoConstraints = false
-            
-            visualEffectView.addSubview(closeButton)
-            
-            NSLayoutConstraint.activate([
-                closeButton.topAnchor.constraint(equalTo: visualEffectView.topAnchor, constant: 10),
-                closeButton.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor, constant: -10),
-                closeButton.widthAnchor.constraint(equalToConstant: 20),
-                closeButton.heightAnchor.constraint(equalToConstant: 20)
-            ])
-            
-            NSLayoutConstraint.activate([
-                textLabel.centerXAnchor.constraint(equalTo: visualEffectView.centerXAnchor),
-                textLabel.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor, constant: 10),
-                textLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 300)
-            ])
+            container.addSubview(closeButton)
+
+            constraints += [
+                closeButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                closeButton.trailingAnchor.constraint(equalTo: container.trailingAnchor,
+                                                      constant: -Metrics.closeButtonGap),
+                closeButton.widthAnchor.constraint(equalToConstant: Metrics.closeButtonSize),
+                closeButton.heightAnchor.constraint(equalToConstant: Metrics.closeButtonSize),
+                textLabel.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor,
+                                                    constant: -Metrics.closeButtonGap)
+            ]
         } else {
-            NSLayoutConstraint.activate([
-                textLabel.centerXAnchor.constraint(equalTo: visualEffectView.centerXAnchor),
-                textLabel.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
-                textLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 300)
-            ])
+            constraints.append(textLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor,
+                                                                   constant: -Metrics.horizontalPadding))
         }
-        
-        self.contentView = visualEffectView
+
+        NSLayoutConstraint.activate(constraints)
+        contentView = container
     }
-    
+
     private func positionNearCursor() {
         let mouseLocation = NSEvent.mouseLocation
-        
-        // Position slightly above and to the right of the cursor
-        let x = mouseLocation.x + 15
-        let y = mouseLocation.y + 15
-        
-        self.setFrameOrigin(NSPoint(x: x, y: y))
+
+        // Slightly above and to the right of the cursor, then clamped so the panel
+        // never lands partly off screen.
+        var origin = NSPoint(x: mouseLocation.x + Metrics.cursorOffset,
+                             y: mouseLocation.y + Metrics.cursorOffset)
+
+        let screen = NSScreen.screens.first { $0.frame.contains(mouseLocation) } ?? NSScreen.main
+        if let visible = screen?.visibleFrame {
+            let size = frame.size
+            let maxX = visible.maxX - size.width - Metrics.screenMargin
+            let maxY = visible.maxY - size.height - Metrics.screenMargin
+            origin.x = min(max(origin.x, visible.minX + Metrics.screenMargin), max(maxX, visible.minX))
+            origin.y = min(max(origin.y, visible.minY + Metrics.screenMargin), max(maxY, visible.minY))
+        }
+
+        setFrameOrigin(origin)
     }
-    
+
     func show() {
-        self.alphaValue = 0
-        self.orderFront(nil)
-        
-        NSAnimationContext.runAnimationGroup({ context in
+        alphaValue = 0
+        // orderFrontRegardless, because an accessory app is never the active app.
+        orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
-            self.animator().alphaValue = 1.0
-        })
-        
-        if !showCloseButton {
+            animator().alphaValue = 1.0
+        }
+
+        if !showsCloseButton {
             dismissTimer?.invalidate()
-            dismissTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
-                self?.fadeOutAndClose()
+            dismissTimer = Timer.scheduledTimer(withTimeInterval: Metrics.autoDismissDelay,
+                                                repeats: false) { [weak self] _ in
+                self?.dismissOverlay()
             }
         }
     }
-    
-    @objc private func fadeOutAndClose() {
+
+    @objc func dismissOverlay() {
+        guard !isDismissing else { return }
+        isDismissing = true
+
+        dismissTimer?.invalidate()
+        dismissTimer = nil
+
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.3
-            self.animator().alphaValue = 0.0
-        }, completionHandler: {
+            animator().alphaValue = 0.0
+        }, completionHandler: { [weak self] in
+            guard let self else { return }
             self.close()
+            self.onDismiss?(self)
         })
+    }
+
+    deinit {
+        dismissTimer?.invalidate()
     }
 }

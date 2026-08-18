@@ -11,76 +11,117 @@ struct TyplyContext {
     let selectedText: String
     let isEditable: Bool
     let focusedElement: AXUIElement?
+    /// True when the text came from a clipboard round trip rather than from the
+    /// Accessibility API, which means we cannot write back through AX either.
+    let usedPasteboardFallback: Bool
 }
 
-class ContextClassifier {
-    
-    func captureContext() -> TyplyContext {
-        let systemWideElement = AXUIElementCreateSystemWide()
-        var focusedElementRaw: CFTypeRef?
-        
-        // Get focused element
-        let error = AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedUIElementAttribute as CFString, &focusedElementRaw)
-        
-        guard error == .success, let focusedElement = focusedElementRaw as! AXUIElement? else {
-            return fallbackContext()
+final class ContextClassifier {
+
+    /// How long to wait for the front app to service a synthetic Cmd+C.
+    private static let pasteboardSettleDelay: TimeInterval = 0.15
+
+    /// Captures the current selection. The completion is always called on the main thread.
+    func captureContext(completion: @escaping (TyplyContext) -> Void) {
+        let focusedElement = copyFocusedElement()
+        let editable = focusedElement.map(isElementEditable) ?? false
+
+        if let focusedElement, let text = copySelectedText(from: focusedElement) {
+            completion(TyplyContext(selectedText: text,
+                                    isEditable: editable,
+                                    focusedElement: focusedElement,
+                                    usedPasteboardFallback: false))
+            return
         }
-        
-        // Get selected text
-        var selectedTextRaw: CFTypeRef?
-        let textError = AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextAttribute as CFString, &selectedTextRaw)
-        
-        guard textError == .success, let selectedText = selectedTextRaw as? String, !selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return fallbackContext()
+
+        // Chromium, Electron and most web views never expose AXSelectedText, so ask
+        // the front app for a copy instead of giving up.
+        captureViaPasteboard(focusedElement: focusedElement,
+                             isEditable: editable,
+                             completion: completion)
+    }
+
+    private func copyFocusedElement() -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var raw: CFTypeRef?
+        let error = AXUIElementCopyAttributeValue(systemWide,
+                                                 kAXFocusedUIElementAttribute as CFString,
+                                                 &raw)
+
+        // Check the CFTypeID before casting: AX hands back whatever the app put there.
+        guard error == .success,
+              let value = raw,
+              CFGetTypeID(value) == AXUIElementGetTypeID() else {
+            return nil
         }
-        
-        // Check editability
-        var isEditable = false
+        return (value as! AXUIElement)
+    }
+
+    private func copySelectedText(from element: AXUIElement) -> String? {
+        var raw: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &raw) == .success,
+              let text = raw as? String,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return text
+    }
+
+    private func isElementEditable(_ element: AXUIElement) -> Bool {
         var isSettable: DarwinBoolean = false
-        let settableError = AXUIElementIsAttributeSettable(focusedElement, kAXSelectedTextAttribute as CFString, &isSettable)
-        
-        if settableError == .success && isSettable.boolValue {
-            isEditable = true
-        } else {
-            // Check roles as fallback
-            var roleRaw: CFTypeRef?
-            if AXUIElementCopyAttributeValue(focusedElement, kAXRoleAttribute as CFString, &roleRaw) == .success,
-               let role = roleRaw as? String {
-                if role == kAXTextFieldRole || role == kAXTextAreaRole {
-                    isEditable = true
-                }
-            }
+        if AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &isSettable) == .success,
+           isSettable.boolValue {
+            return true
         }
-        
-        return TyplyContext(selectedText: selectedText, isEditable: isEditable, focusedElement: focusedElement)
+
+        var roleRaw: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRaw) == .success,
+           let role = roleRaw as? String {
+            return role == kAXTextFieldRole || role == kAXTextAreaRole || role == kAXComboBoxRole
+        }
+        return false
     }
-    
-    private func fallbackContext() -> TyplyContext {
-        // Fallback: Copy via Cmd+C
-        // For v1, if AX fails, we can try to extract from pasteboard.
-        // Doing Cmd+C programmatically via CGEvent is an option, but for now we'll just return empty/non-editable.
-        return TyplyContext(selectedText: "", isEditable: false, focusedElement: nil)
+
+    private func captureViaPasteboard(focusedElement: AXUIElement?,
+                                      isEditable: Bool,
+                                      completion: @escaping (TyplyContext) -> Void) {
+        let pasteboard = NSPasteboard.general
+        let snapshot = PasteboardSnapshot(pasteboard)
+        let changeCountBeforeCopy = pasteboard.changeCount
+
+        KeyboardSimulator.copySelection()
+
+        // Synthetic key events are delivered asynchronously by the window server,
+        // so give the front app a moment before reading the pasteboard back.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pasteboardSettleDelay) {
+            let copied = pasteboard.changeCount != changeCountBeforeCopy
+                ? pasteboard.string(forType: .string)
+                : nil
+
+            snapshot.restore(to: pasteboard)
+
+            var text = ""
+            if let copied, !copied.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                text = copied
+            }
+
+            completion(TyplyContext(selectedText: text,
+                                    isEditable: isEditable,
+                                    focusedElement: focusedElement,
+                                    usedPasteboardFallback: true))
+        }
     }
-    
+
     func determineAction(for context: TyplyContext) -> TyplyAction? {
         let text = context.selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return nil }
-        
+
         let words = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
-        let wordCount = words.count
-        
-        if wordCount == 1 {
-            if context.isEditable {
-                return .fixSpelling(text)
-            } else {
-                return .define(text)
-            }
+
+        if words.count == 1 {
+            return context.isEditable ? .fixSpelling(text) : .define(text)
         } else {
-            if context.isEditable {
-                return .rewrite(text)
-            } else {
-                return .summarize(text)
-            }
+            return context.isEditable ? .rewrite(text) : .summarize(text)
         }
     }
 }
