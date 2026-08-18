@@ -9,13 +9,17 @@ import Carbon.HIToolbox
 /// toggled Caps Lock every time it fired. A registered hot key is consumed by us
 /// and never reaches the front app.
 ///
-/// The shortcut defaults to Option-Command-Space and can be changed with:
+/// The shortcut defaults to Control-Option-Space — two modifiers plus Space, chosen
+/// because it's rarely claimed (unlike Command-Space, which is Spotlight, or
+/// Option-Space, which most launcher apps grab) — and can be changed with:
 ///
 ///     defaults write com.typly.app HotKeyCode -int 49
-///     defaults write com.typly.app HotKeyModifiers -int 2304
+///     defaults write com.typly.app HotKeyModifiers -int 2304   // e.g. back to Option-Command-Space
 ///
 /// where `HotKeyCode` is a virtual key code (`kVK_*`) and `HotKeyModifiers` is a
-/// Carbon modifier mask (`cmdKey` 256, `shiftKey` 512, `optionKey` 2048, `controlKey` 4096).
+/// Carbon modifier mask (`cmdKey` 256, `shiftKey` 512, `optionKey` 2048, `controlKey` 4096) —
+/// add together the ones you want. If the default is already taken on your machine,
+/// Typly reports it at launch instead of failing silently.
 final class HotkeyManager {
 
     static let keyCodeDefaultsKey = "HotKeyCode"
@@ -38,7 +42,7 @@ final class HotkeyManager {
         if let stored = UserDefaults.standard.object(forKey: Self.modifiersDefaultsKey) as? Int {
             return UInt32(stored)
         }
-        return UInt32(optionKey | cmdKey)
+        return UInt32(controlKey | optionKey)
     }
 
     /// Human readable form of the active shortcut, for error messages.
