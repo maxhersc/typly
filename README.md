@@ -18,7 +18,7 @@ glass overlay.
 
 ## How it works
 
-1. You press the shortcut (default **⌥⌘Space**).
+1. You press the shortcut (default **⌃⌥Space**).
 2. Typly reads the focused element's selected text through the Accessibility API.
    If the app doesn't expose it — Chromium, Electron and most web views don't —
    Typly falls back to a synthetic ⌘C and restores your clipboard afterwards.
@@ -79,9 +79,9 @@ The shortcut is stored in user defaults as a virtual key code and a Carbon
 modifier mask, and is read at launch:
 
 ```bash
-# ⌃⌥Space instead of ⌥⌘Space
+# ⌥⌘Space instead of the default ⌃⌥Space
 defaults write com.typly.app HotKeyCode -int 49
-defaults write com.typly.app HotKeyModifiers -int 6144
+defaults write com.typly.app HotKeyModifiers -int 2304
 ```
 
 Modifier mask values: `cmdKey` 256, `shiftKey` 512, `optionKey` 2048,
